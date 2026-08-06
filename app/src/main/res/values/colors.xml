@@ -1,0 +1,8 @@
+<resources>
+    <color name="system_bg">#05070A</color>
+    <color name="system_panel">#0F1E24</color>
+    <color name="system_border">#1F4A56</color>
+    <color name="system_text">#D7F4FF</color>
+    <color name="system_accent">#6FE6FF</color>
+    <color name="system_accent_dim">#3DD6F5</color>
+</resources>

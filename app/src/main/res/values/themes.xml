@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.Jarvis" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/system_bg</item>
+        <item name="colorPrimary">@color/system_accent</item>
+        <item name="colorAccent">@color/system_accent</item>
+        <item name="android:textColorPrimary">@color/system_text</item>
+    </style>
+</resources>

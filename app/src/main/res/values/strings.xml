@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">System</string>
+    <string name="accessibility_service_description">Permite lui System să deschidă aplicații și să citească ecranul pentru a te ajuta.</string>
+</resources>

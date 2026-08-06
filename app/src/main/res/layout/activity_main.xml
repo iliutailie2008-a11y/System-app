@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/system_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="S Y S T E M"
+            android:textColor="@color/system_accent"
+            android:textSize="14sp"
+            android:letterSpacing="0.3"
+            android:gravity="center"
+            android:textStyle="bold"
+            android:layout_marginBottom="6dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/accessibilityButton"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/system_accent"
+                android:textSize="11sp"
+                android:text="Accesibilitate" />
+
+            <Button
+                android:id="@+id/settingsButton"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/system_accent"
+                android:textSize="11sp"
+                android:text="Setări" />
+
+            <Button
+                android:id="@+id/memoryButton"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/system_accent"
+                android:textSize="11sp"
+                android:text="Memorie" />
+
+            <Button
+                android:id="@+id/notesButton"
+                style="?android:attr/borderlessButtonStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/system_accent"
+                android:textSize="11sp"
+                android:text="Notițe" />
+        </LinearLayout>
+
+        <!-- STAGE: orb idle (rotativ) + strat de continut vizual contextual -->
+        <FrameLayout
+            android:id="@+id/stage"
+            android:layout_width="match_parent"
+            android:layout_height="250dp"
+            android:layout_marginTop="4dp">
+
+            <com.jarvis.assistant.SphereView
+                android:id="@+id/sphereView"
+                android:layout_width="210dp"
+                android:layout_height="210dp"
+                android:layout_gravity="center" />
+
+            <FrameLayout
+                android:id="@+id/visualContainer"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:alpha="0">
+
+                <WebView
+                    android:id="@+id/mapWebView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone" />
+
+                <com.jarvis.assistant.BarChartView
+                    android:id="@+id/chartView"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_panel"
+                    android:padding="12dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/diagramPanel"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_panel"
+                    android:padding="14dp"
+                    android:textColor="@color/system_text"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+            </FrameLayout>
+        </FrameLayout>
+
+        <ScrollView
+            android:id="@+id/scrollView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="8dp">
+
+            <TextView
+                android:id="@+id/conversationView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/system_text"
+                android:textSize="15sp" />
+        </ScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/cameraButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/system_panel"
+                android:textColor="@color/system_accent"
+                android:textSize="11sp"
+                android:text="📷 Diagnoză" />
+
+            <Button
+                android:id="@+id/reportButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/system_panel"
+                android:textColor="@color/system_accent"
+                android:textSize="11sp"
+                android:text="Raport" />
+
+            <Button
+                android:id="@+id/reminderButton"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/system_panel"
+                android:textColor="@color/system_accent"
+                android:textSize="11sp"
+                android:text="Reminder" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <EditText
+                android:id="@+id/inputText"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/system_text"
+                android:textColorHint="@color/system_border"
+                android:hint="Scrie o comandă..." />
+
+            <Button
+                android:id="@+id/micButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/system_panel"
+                android:textColor="@color/system_accent"
+                android:text="🎤" />
+
+            <Button
+                android:id="@+id/sendButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:backgroundTint="@color/system_panel"
+                android:textColor="@color/system_accent"
+                android:text="➤" />
+        </LinearLayout>
+
+    </LinearLayout>
+</FrameLayout>
