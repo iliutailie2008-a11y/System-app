@@ -241,10 +241,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun launchCamera() {
-        val imagesDir = File(cacheDir, "images").apply { mkdirs() }
-        val file = File(imagesDir, "diagnostic_${System.currentTimeMillis()}.jpg")
-        photoUri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
-        takePictureLauncher.launch(photoUri)
+    val imagesDir = File(cacheDir, "images").apply { mkdirs() }
+    val file = File(imagesDir, "diagnostic_${System.currentTimeMillis()}.jpg")
+    val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+    photoUri = uri
+    takePictureLauncher.launch(uri)
     }
 
     private fun sendImageMessage(uri: Uri) {
