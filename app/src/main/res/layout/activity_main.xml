@@ -71,8 +71,8 @@
             android:layout_height="250dp"
             android:layout_marginTop="4dp">
 
-            <com.jarvis.assistant.SphereView
-                android:id="@+id/sphereView"
+            <com.jarvis.assistant.OrbView
+    android:id="@+id/sphereView"
                 android:layout_width="210dp"
                 android:layout_height="210dp"
                 android:layout_gravity="center" />
@@ -89,8 +89,8 @@
                     android:layout_height="match_parent"
                     android:visibility="gone" />
 
-                <com.jarvis.assistant.OrbView
-                    android:id="@+id/chartView"
+                <com.jarvis.assistant.BarChartView
+    android:id="@+id/chartView"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:background="@drawable/bg_panel"
