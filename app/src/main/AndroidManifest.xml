@@ -8,6 +8,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
+        android:name=".SystemApplication"
         android:allowBackup="true"
         android:label="System"
         android:theme="@style/Theme.Jarvis">
@@ -21,8 +22,11 @@
             </intent-filter>
         </activity>
 
-        <receiver android:name=".DailyReminderReceiver" android:exported="false" />
+        <activity
+            android:name=".CrashActivity"
+            android:exported="false" />
 
+        <receiver android:name=".DailyReminderReceiver" android:exported="false" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
