@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
     private val history = mutableListOf<Pair<String, String>>()
     private val conversationLog = StringBuilder()
 
-    private val actionRegex = Regex("""\[ACTION:(\{.*?})]""")
+    private val actionRegex = Regex("""\[ACTION:(\{.*?\})]""")
     private val rememberRegex = Regex("""\[REMEMBER:([^|\]]+)\|([^]]*)]""")
     private val visualRegex = Regex("""\[VISUAL:([^|\]]+)\|([^]]*)]""")
     private val noteRegex = Regex("""\[NOTE:([^\]]+)]([\s\S]*?)\[/NOTE]""")
