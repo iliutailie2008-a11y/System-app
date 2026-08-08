@@ -4,13 +4,17 @@ import android.Manifest
 import android.app.AlarmManager
 import android.app.Activity
 import android.app.PendingIntent
+import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Base64
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,7 +35,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tts: TextToSpeech
     private lateinit var memoryStore: MemoryStore
     private var apiClient: ClaudeApiClient? = null
+    private var elevenLabsClient: ElevenLabsClient? = null
     private var photoUri: Uri? = null
+    private var voiceModeEnabled = false
+    private var pendingReminderHour: Int? = null
+    private var pendingReminderMinute: Int? = null
     private val history = mutableListOf<Pair<String, String>>()
     private val conversationLog = StringBuilder()
 
@@ -71,11 +79,21 @@ class MainActivity : AppCompatActivity() {
         if (granted) launchCamera() else toast("Am nevoie de acces la cameră pentru diagnoză foto.")
     }
 
+    private val pickImageLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri -> uri?.let { sendImageMessage(it) } }
+
     // --- Notificări (reminder) ---
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) enableReminder() else toast("Am nevoie de permisiunea de notificări pentru reminder.")
+        val hour = pendingReminderHour
+        val minute = pendingReminderMinute
+        if (granted && hour != null && minute != null) {
+            enableReminder(hour, minute)
+        } else if (!granted) {
+            toast("Am nevoie de permisiunea de notificări pentru reminder.")
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,11 +101,24 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        tts = TextToSpeech(this) { }
-        tts.language = Locale("ro", "RO")
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                tts.language = Locale("ro", "RO")
+                tts.setSpeechRate(1.0f)
+                tts.setPitch(1.0f)
+            }
+        }
+        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {}
+            override fun onDone(utteranceId: String?) {
+                if (utteranceId == "system_reply") onSpeechFinished()
+            }
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) {}
+        })
         memoryStore = MemoryStore(this)
-
         loadApiKeyOrPrompt()
+        loadElevenLabsClient()
         updateReminderButtonLabel()
 
         binding.sendButton.setOnClickListener {
@@ -95,17 +126,83 @@ class MainActivity : AppCompatActivity() {
             if (text.isNotEmpty()) sendMessage(text)
         }
         binding.micButton.setOnClickListener { checkMicPermissionAndListen() }
-        binding.settingsButton.setOnClickListener { promptForApiKey() }
+        binding.micButton.setOnLongClickListener {
+            voiceModeEnabled = !voiceModeEnabled
+            toast(if (voiceModeEnabled) "Mod conversație activat — vorbește liber." else "Mod conversație dezactivat.")
+            if (voiceModeEnabled) checkMicPermissionAndListen()
+            true
+        }
+        binding.settingsButton.setOnClickListener { showSettingsMenu() }
         binding.accessibilityButton.setOnClickListener {
             startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
         binding.memoryButton.setOnClickListener { showMemoryDialog() }
         binding.notesButton.setOnClickListener { showNotesDialog() }
         binding.cameraButton.setOnClickListener { checkCameraPermissionAndLaunch() }
+        binding.cameraButton.setOnLongClickListener {
+            pickImageLauncher.launch("image/*")
+            true
+        }
         binding.reportButton.setOnClickListener {
             sendMessage("Fă-mi un raport scurt de progres, separat pe eCommerce și pe auto, bazat pe ce știi despre mine până acum.")
         }
         binding.reminderButton.setOnClickListener { toggleReminder() }
+    }
+
+    // ---------- SETĂRI ----------
+
+    private fun showSettingsMenu() {
+        AlertDialog.Builder(this)
+            .setTitle("Setări")
+            .setItems(arrayOf("Cheia API Anthropic", "Voce naturală (ElevenLabs, opțional)")) { _, which ->
+                when (which) {
+                    0 -> promptForApiKey()
+                    1 -> promptForElevenLabsKey()
+                }
+            }
+            .show()
+    }
+
+    private fun loadElevenLabsClient() {
+        val prefs = getSharedPreferences("jarvis_prefs", MODE_PRIVATE)
+        val key = prefs.getString("elevenlabs_key", null)
+        val voiceId = prefs.getString("elevenlabs_voice_id", null)
+        if (!key.isNullOrBlank() && !voiceId.isNullOrBlank()) {
+            elevenLabsClient = ElevenLabsClient(key, voiceId)
+        }
+    }
+
+    private fun promptForElevenLabsKey() {
+        val prefs = getSharedPreferences("jarvis_prefs", MODE_PRIVATE)
+        val keyInput = AppCompatEditText(this)
+        keyInput.hint = "Cheia API ElevenLabs"
+        keyInput.setText(prefs.getString("elevenlabs_key", ""))
+        val voiceInput = AppCompatEditText(this)
+        voiceInput.hint = "Voice ID (din elevenlabs.io/app/voice-library)"
+        voiceInput.setText(prefs.getString("elevenlabs_voice_id", ""))
+
+        val container = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 0)
+            addView(keyInput)
+            addView(voiceInput)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("Voce naturală (ElevenLabs)")
+            .setMessage("Opțional — dacă lași gol, System folosește vocea normală a telefonului.")
+            .setView(container)
+            .setPositiveButton("Salvează") { _, _ ->
+                val key = keyInput.text.toString().trim()
+                val voiceId = voiceInput.text.toString().trim()
+                prefs.edit()
+                    .putString("elevenlabs_key", key)
+                    .putString("elevenlabs_voice_id", voiceId)
+                    .apply()
+                loadElevenLabsClient()
+                toast(if (key.isNotEmpty()) "Voce ElevenLabs salvată." else "Revenit la vocea telefonului.")
+            }
+            .show()
     }
 
     // ---------- API KEY ----------
@@ -241,11 +338,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun launchCamera() {
-    val imagesDir = File(cacheDir, "images").apply { mkdirs() }
-    val file = File(imagesDir, "diagnostic_${System.currentTimeMillis()}.jpg")
-    val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
-    photoUri = uri
-    takePictureLauncher.launch(uri)
+        val imagesDir = File(cacheDir, "images").apply { mkdirs() }
+        val file = File(imagesDir, "diagnostic_${System.currentTimeMillis()}.jpg")
+        photoUri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        takePictureLauncher.launch(photoUri)
     }
 
     private fun sendImageMessage(uri: Uri) {
@@ -283,22 +379,41 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ---------- REMINDER ZILNIC ----------
+    // ---------- REMINDER LA ORA ALEASĂ DE TINE ----------
 
     private fun toggleReminder() {
         val prefs = getSharedPreferences("jarvis_prefs", MODE_PRIVATE)
         val enabled = prefs.getBoolean("reminder_enabled", false)
-        if (enabled) {
-            disableReminder()
-        } else {
+        val options = if (enabled) arrayOf("Schimbă ora", "Dezactivează") else arrayOf("Setează ora")
+        AlertDialog.Builder(this)
+            .setTitle("Reminder zilnic")
+            .setItems(options) { _, which ->
+                val choice = options[which]
+                when (choice) {
+                    "Setează ora", "Schimbă ora" -> pickReminderTime()
+                    "Dezactivează" -> disableReminder()
+                }
+            }
+            .show()
+    }
+
+    private fun pickReminderTime() {
+        val now = Calendar.getInstance()
+        val prefs = getSharedPreferences("jarvis_prefs", MODE_PRIVATE)
+        val defaultHour = prefs.getInt("reminder_hour", now.get(Calendar.HOUR_OF_DAY))
+        val defaultMinute = prefs.getInt("reminder_minute", now.get(Calendar.MINUTE))
+
+        TimePickerDialog(this, { _, hour, minute ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
             ) {
+                pendingReminderHour = hour
+                pendingReminderMinute = minute
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
             } else {
-                enableReminder()
+                enableReminder(hour, minute)
             }
-        }
+        }, defaultHour, defaultMinute, true).show()
     }
 
     private fun reminderPendingIntent(): PendingIntent {
@@ -309,11 +424,11 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun enableReminder() {
+    private fun enableReminder(hour: Int, minute: Int) {
         val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
         val triggerTime = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 9)
-            set(Calendar.MINUTE, 0)
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
             if (before(Calendar.getInstance())) add(Calendar.DAY_OF_YEAR, 1)
         }.timeInMillis
@@ -321,9 +436,13 @@ class MainActivity : AppCompatActivity() {
         alarmManager.setRepeating(
             AlarmManager.RTC_WAKEUP, triggerTime, AlarmManager.INTERVAL_DAY, reminderPendingIntent()
         )
-        getSharedPreferences("jarvis_prefs", MODE_PRIVATE).edit().putBoolean("reminder_enabled", true).apply()
+        getSharedPreferences("jarvis_prefs", MODE_PRIVATE).edit()
+            .putBoolean("reminder_enabled", true)
+            .putInt("reminder_hour", hour)
+            .putInt("reminder_minute", minute)
+            .apply()
         updateReminderButtonLabel()
-        toast("Reminder zilnic activat, la 9:00.")
+        toast("Reminder zilnic setat la ${"%02d".format(hour)}:${"%02d".format(minute)}.")
     }
 
     private fun disableReminder() {
@@ -335,8 +454,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateReminderButtonLabel() {
-        val enabled = getSharedPreferences("jarvis_prefs", MODE_PRIVATE).getBoolean("reminder_enabled", false)
-        binding.reminderButton.text = if (enabled) "Reminder ✓" else "Reminder"
+        val prefs = getSharedPreferences("jarvis_prefs", MODE_PRIVATE)
+        val enabled = prefs.getBoolean("reminder_enabled", false)
+        if (enabled) {
+            val hour = prefs.getInt("reminder_hour", 9)
+            val minute = prefs.getInt("reminder_minute", 0)
+            binding.reminderButton.text = "Reminder ${"%02d".format(hour)}:${"%02d".format(minute)}"
+        } else {
+            binding.reminderButton.text = "Reminder"
+        }
     }
 
     // ---------- CHAT TEXT ----------
@@ -366,7 +492,7 @@ class MainActivity : AppCompatActivity() {
             appendToLog("System: ${parsed.text}")
             history.add("user" to userText)
             history.add("assistant" to reply)
-            tts.speak(parsed.text, TextToSpeech.QUEUE_FLUSH, null, null)
+            speakText(parsed.text)
             parsed.action?.let { JarvisActions.serviceInstance?.executeAction(it) }
             parsed.remembers.forEach { (cat, fact) -> memoryStore.addMemory(cat, fact) }
             parsed.note?.let { (title, content) -> memoryStore.addNote(title, content) }
@@ -375,6 +501,39 @@ class MainActivity : AppCompatActivity() {
             } else {
                 showIdleSphere()
             }
+        }
+    }
+
+    /** Vorbește folosind ElevenLabs (voce naturală) dacă e configurat, altfel vocea telefonului. */
+    private fun speakText(text: String) {
+        if (text.isBlank()) {
+            onSpeechFinished()
+            return
+        }
+        val eleven = elevenLabsClient
+        if (eleven != null) {
+            eleven.synthesizeAndPlay(
+                context = this,
+                text = text,
+                onDone = { runOnUiThread { onSpeechFinished() } },
+                onError = {
+                    runOnUiThread {
+                        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "system_reply")
+                    }
+                }
+            )
+        } else {
+            val params = android.os.Bundle().apply {
+                putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
+            }
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "system_reply")
+        }
+    }
+
+    /** Apelat când vorbirea s-a terminat — dacă modul conversație e activ, ascultă din nou automat. */
+    private fun onSpeechFinished() {
+        if (voiceModeEnabled) {
+            Handler(Looper.getMainLooper()).postDelayed({ checkMicPermissionAndListen() }, 400)
         }
     }
 
