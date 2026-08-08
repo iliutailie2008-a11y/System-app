@@ -89,7 +89,7 @@
                     android:layout_height="match_parent"
                     android:visibility="gone" />
 
-                <com.jarvis.assistant.BarChartView
+                <com.jarvis.assistant.OrbView
                     android:id="@+id/chartView"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
