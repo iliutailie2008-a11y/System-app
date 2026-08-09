@@ -5,6 +5,8 @@ import android.graphics.BlurMaskFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.RadialGradient
 import android.graphics.Shader
 import android.util.AttributeSet
@@ -35,6 +37,83 @@ class OrbView @JvmOverloads constructor(
         Blob("#FBC2EB", 0.50f, 0.7f, 4f, 0.24f),
         Blob("#38F9D7", 0.55f, 0.45f, 1f, 0.26f),
         Blob("#F6D365", 0.42f, 0.65f, 3f, 0.20f)
+    )
+
+    private var t = 0f
+    private val screenMode = PorterDuffXfermode(PorterDuff.Mode.SCREEN)
+
+    private val ticker = object : Runnable {
+        override fun run() {
+            t += 0.02f
+            invalidate()
+            postDelayed(this, 16)
+        }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        post(ticker)
+    }
+
+    override fun onDetachedFromWindow() {
+        removeCallbacks(ticker)
+        super.onDetachedFromWindow()
+    }
+
+    override fun onDraw(canvas: Canvas) {
+        super.onDraw(canvas)
+        val cx = width / 2f
+        val cy = height / 2f
+        val baseRadius = minOf(width, height) / 2.6f
+        if (baseRadius <= 0f) return
+
+        val glowPaint = Paint().apply {
+            isAntiAlias = true
+            xfermode = screenMode
+            shader = RadialGradient(
+                cx, cy, baseRadius * 1.6f,
+                intArrayOf(applyAlpha(Color.parseColor("#6FE6FF"), 60), applyAlpha(Color.parseColor("#6FE6FF"), 0)),
+                floatArrayOf(0f, 1f),
+                Shader.TileMode.CLAMP
+            )
+            maskFilter = BlurMaskFilter(baseRadius * 0.5f, BlurMaskFilter.Blur.NORMAL)
+        }
+        canvas.drawCircle(cx, cy, baseRadius * 1.6f, glowPaint)
+
+        for (blob in blobs) {
+            val angle = t * blob.speed + blob.phase
+            val ox = cx + cos(angle) * baseRadius * blob.orbitFactor
+            val oy = cy + sin(angle * 1.3f) * baseRadius * blob.orbitFactor
+            val r = baseRadius * blob.radiusFactor
+
+            val color = Color.parseColor(blob.colorHex)
+            val paint = Paint().apply {
+                isAntiAlias = true
+                xfermode = screenMode
+                shader = RadialGradient(
+                    ox, oy, r,
+                    intArrayOf(applyAlpha(color, 220), applyAlpha(color, 0)),
+                    floatArrayOf(0f, 1f),
+                    Shader.TileMode.CLAMP
+                )
+                maskFilter = BlurMaskFilter(r * 0.3f, BlurMaskFilter.Blur.NORMAL)
+            }
+            canvas.drawCircle(ox, oy, r, paint)
+        }
+
+        val outlinePaint = Paint().apply {
+            isAntiAlias = true
+            style = Paint.Style.STROKE
+            strokeWidth = 2f
+            color = Color.parseColor("#40FFFFFF")
+        }
+        canvas.drawCircle(cx, cy, baseRadius, outlinePaint)
+    }
+
+    private fun applyAlpha(color: Int, alpha: Int): Int {
+        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
+    }
+}        Blob("#F6D365", 0.42f, 0.65f, 3f, 0.20f)
     )
 
     private var t = 0f
