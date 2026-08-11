@@ -506,7 +506,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     /** Vorbește folosind ElevenLabs (voce naturală) dacă e configurat, altfel vocea telefonului. */
-    private fun speakText(text: String) {
+    /** Vorbește folosind ElevenLabs (voce naturală) dacă e configurat, altfel vocea telefonului. */
+    private fun speakText(rawText: String) {
+        val text = sanitizeForSpeech(rawText)
         if (text.isBlank()) {
             onSpeechFinished()
             return
@@ -529,6 +531,20 @@ class MainActivity : AppCompatActivity() {
             }
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "system_reply")
         }
+    }
+
+    /** Curăță textul de formatare (steluțe, diez, liniuțe de listă) ca vocea să nu le mai citească literal. */
+    private fun sanitizeForSpeech(text: String): String {
+        return text
+            .replace(Regex("""\*\*(.*?)\*\*"""), "$1")
+            .replace(Regex("""\*(.*?)\*"""), "$1")
+            .replace(Regex("""^#+\s*""", RegexOption.MULTILINE), "")
+            .replace(Regex("""^[-•]\s+""", RegexOption.MULTILINE), "")
+            .replace(Regex("""^\d+\.\s+""", RegexOption.MULTILINE), "")
+            .replace("`", "")
+            .replace(Regex("""\n{2,}"""), ". ")
+            .replace("\n", ". ")
+            .trim()
     }
 
     /** Apelat când vorbirea s-a terminat — dacă modul conversație e activ, ascultă din nou automat. */
