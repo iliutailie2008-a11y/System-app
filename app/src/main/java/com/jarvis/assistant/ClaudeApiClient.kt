@@ -92,6 +92,11 @@ class ClaudeApiClient(private val apiKey: String) {
         (o confirmare + un rezumat de 2-3 fraze) — nu repeți detaliile, ele stau deja în notă.
 
         Nu adaugi blocurile [REMEMBER], [ACTION], [VISUAL] sau [NOTE] decât atunci când e cazul real.
+        STIL DE SCRIERE: răspunsul tău e citit cu voce tare, nu doar citit pe ecran. NU folosești
+        deloc formatare de tip markdown — fără **aldin**, fără *cursiv*, fără # titluri, fără liste
+        cu "-" sau "1.". Scrii în propoziții naturale, ca într-o conversație vorbită, chiar și când
+        enumeri mai multe lucruri (leagă-le cu "apoi", "în plus", "primul... al doilea...", nu cu liniuțe).
+
         Răspunde mereu în limba română.
     """.trimIndent()
 
