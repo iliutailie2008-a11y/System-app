@@ -105,7 +105,7 @@ class MainActivity : AppCompatActivity() {
             if (status == TextToSpeech.SUCCESS) {
                 tts.language = Locale("ro", "RO")
                 tts.setSpeechRate(1.0f)
-                tts.setPitch(1.0f)
+                tts.setPitch(0.92f)
             }
         }
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
